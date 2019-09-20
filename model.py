@@ -3,6 +3,28 @@ Imports
 '''
 import re
 import numpy as np
+from keras.models import Sequential, Model
+from keras.layers.embeddings import Embedding
+from keras.layers import Input, Activation, Dense, Permute, Dropout
+from keras import backend as K
+
+
+'''
+Code below is by isaacsultan from 
+https://stackoverflow.com/questions/51003027/computing-cosine-similarity-between-two-tensors-in-keras
+'''
+def cosine_distance(vests):
+	x, y = vests
+	x = K.l2_normalize(x, axis=-1)
+	y = K.l2_normalize(y, axis=-1)
+	return -K.mean(x * y, axis=-1, keepdims=True)
+
+def cos_dist_output_shape(shapes):
+	shape1, shape2 = shapes
+	return (shape1[0],1)
+'''
+Here code by isaacsultan ends.
+'''
 
 
 class MemNN:
@@ -12,7 +34,20 @@ class MemNN:
 		this.nv = 0
 		this.entity_map = map()
 		this.vocab_map = map()
-		pass
+
+		# dimension of embedding vectors
+		this.d = 30
+
+		question = Input((this.nv,))
+		q = Embedding()(q)
+
+		fact = Input((this.ns,))
+		f = Embedding(f)
+		# the following line is by isaacsultan from stackoverflow
+		dist = Lambda(cosine_distance, output_shape=cos_dist_output_shape)([q, f])
+		# TODO reproduce the algorythm written in the paper
+		this.model = Model([question, fact], dist)
+		this.model.compile(TODO)
 
 	def __input(self, fact_list, question_list):
 		pass
