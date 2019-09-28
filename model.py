@@ -3,6 +3,7 @@ Imports
 '''
 import re
 import numpy as np
+import random
 from keras.models import Sequential, Model
 from keras.layers.embeddings import Embedding
 from keras.layers import Input, Dot, Activation, Dense, Permute, Dropout, Lambda, Concatenate
@@ -32,8 +33,8 @@ Here code by isaacsultan ends.
 class MemNN:
 
 	def __init__(self):
-		self.ns = 2000000
-		self.nv = 600000
+		self.ns = 1969831
+		self.nv = 61383
 
 		# hyperparameters
 		self.d = 30
@@ -61,7 +62,6 @@ class MemNN:
 
 		self.model = Model([g_q, f_y, f_y_s], out)
 		self.model.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
-		plot_model(self.model)
 
 	def __input(self, fact_list, question_list):
 		pass
@@ -69,45 +69,21 @@ class MemNN:
 	def __output(self, X, y):
 		pass
 
-	def final_loss(self, x):
-		y, y_s = x
-		return self.gamma - y + y_s
-
-	'''
-	Translates FB data row into bag-of-symbol vector
-	'''
-	# def __parse_fact(self, s):
-	# 	tokens = s.split('\t')
-	# 	object = tokens[0]
-	# 	relationship = tokens[1]
-	# 	subjects = tokens[2:]
-	# 	k = len(s)-2
-	# 	fact = np.zeros(self.ns)
-	# 	fact[self.entity_map[object]] = 1
-	# 	fact[self.entity_map[relationship]] = 1
-	# 	for item in subjects:
-	# 		fact[self.entity_map[item]] = 1/k
-	# 	return fact
-
-	'''
-	Translates question in natural language
-	into bag-of-ngrams vector
-	'''
-	# def __parse_question(self, s):
-	# 	s = s.lower()
-	# 	tokens = re.split(r"[:punct:]", s)
-	# 	q = np.zeros(self.nv)
-	# 	# fill tokens
-	# 	for token in s:
-	# 		q[self.vocab_map[token]] = 1
-	# 	# fill aliases
-	# 	for alias in self.alias_map.keys():
-	# 		if alias in q:
-	# 			q[self.alias_map[alias]] = 1
-	# 	return q
-
-	def train_embeddings(self, X, y):
-		pass
+	def train_embeddings(self, q, y, epochs=1000, batch_size=40):
+		count = q.shape[0]
+		target = np.array([np.array([1, 0]) for _ in range(batch_size)])
+		for epoch in range(epochs):
+			idx = np.random.choice(count, batch_size)
+			mq = np.array([np.array(q[i].todense())[0] for i in idx])
+			my = np.array([np.array(y[i].todense())[0] for i in idx])
+			ys = np.array([np.array(y[i].todense())[0] for i in
+				np.random.choice(count, batch_size)])
+			batch = [mq, my, ys]
+			# batch = np.array([[np.array(q[i].todense()).flatten(),
+			# 		  np.array(y[i].todense()).flatten(),
+			# 		  np.array(y[np.random.randint(count)].todense()).flatten()]
+			# 		  for i in idx])
+			self.model.fit(batch, target, verbose=True)
 
 	def predict(self, X):
 		pass
