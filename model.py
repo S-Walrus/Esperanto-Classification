@@ -1,15 +1,20 @@
 '''
 Imports
 '''
+import os
+os.environ['KERAS_BACKEND'] = 'tensorflow'
 import re
 import numpy as np
 import random
 from keras.models import Sequential, Model
+from keras.models import load_model
 from keras.layers.embeddings import Embedding
 from keras.layers import Input, Dot, Activation, Dense, Permute, Dropout, Lambda, Concatenate
 from keras.optimizers import SGD
 from keras.utils import plot_model
 from keras import backend as K
+from time import time
+from math import ceil
 
 
 '''
@@ -69,21 +74,38 @@ class MemNN:
 	def __output(self, X, y):
 		pass
 
-	def train_embeddings(self, q, y, epochs=1000, batch_size=40):
+	def generate_batch(self, q, y, batch_size, batch_start, n_samples):
+		target = np.array([np.array([1, -1]) for _ in range(batch_size)])
+		idx = range(batch_start, min(batch_start+batch_size, n_samples))
+		mq = np.array([np.array(q[i].todense())[0] for i in idx])
+		my = np.array([np.array(y[i].todense())[0] for i in idx])
+		ys = np.array([np.array(y[i].todense())[0] for i in
+			np.random.choice(n_samples, batch_size)])
+		batch = [mq, my, ys]
+		return batch, target
+
+	def train_embeddings(self, q, y, epochs=3, rep_epoch=3, batch_size=40):
 		count = q.shape[0]
-		target = np.array([np.array([1, 0]) for _ in range(batch_size)])
-		for epoch in range(epochs):
-			idx = np.random.choice(count, batch_size)
-			mq = np.array([np.array(q[i].todense())[0] for i in idx])
-			my = np.array([np.array(y[i].todense())[0] for i in idx])
-			ys = np.array([np.array(y[i].todense())[0] for i in
-				np.random.choice(count, batch_size)])
-			batch = [mq, my, ys]
-			# batch = np.array([[np.array(q[i].todense()).flatten(),
-			# 		  np.array(y[i].todense()).flatten(),
-			# 		  np.array(y[np.random.randint(count)].todense()).flatten()]
-			# 		  for i in idx])
-			self.model.fit(batch, target, verbose=True)
+		print('Train data consists of ' + str(count) + ' samples')
+		n_batches = ceil(count / batch_size)
+		batch_start = 0
+		for epoch in range(1, epochs+1):
+			print('Global epoch ' + str(epoch))
+			while batch_start < count:
+				print('Batch ' + str(batch_start // batch_size + 1) + '/' + str(n_batches))
+				batch, target = self.generate_batch(q, y, batch_size, batch_start, count)
+				self.model.fit(x=batch, y=target, epochs=rep_epoch, verbose=True)
+				batch_start += batch_size
+			if batch_start % 500 == 0:
+				print('Saving model to embedding.hd5')
+				self.model.save('embeddind.hd5')
+			print('Saving model to embedding.hd5')
+			self.model.save('embeddind.hd5')
+
+	def load(self, path_to_model):
+		self.model = load_model(path_to_model)
+		self.word_embedding = self.model.get_layer('word_embedding')
+		self.entity_embedding = self.model.get_layer('entity_embedding')
 
 	def predict(self, X):
 		pass
