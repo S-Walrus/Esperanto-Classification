@@ -15,6 +15,8 @@ from keras.utils import plot_model
 from keras import backend as K
 from time import time
 from math import ceil
+from scipy.spatial.distance import cosine
+from tqdm import tqdm
 
 
 '''
@@ -65,8 +67,13 @@ class MemNN:
 		out = Concatenate(axis=-1, name='out')([s, s_s])
 		# y must be [1, 0]
 
+		# build embedding trainer
 		self.model = Model([g_q, f_y, f_y_s], out)
 		self.model.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
+
+		# build cosine distance calculator
+		self.cosine = Model([g_q, f_y], s)
+		self.cosine.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
 
 	def __input(self, fact_list, question_list):
 		pass
@@ -107,8 +114,13 @@ class MemNN:
 		self.word_embedding = self.model.get_layer('word_embedding')
 		self.entity_embedding = self.model.get_layer('entity_embedding')
 
-	def predict(self, X):
-		pass
+	def predict(self, q, y):
+		cosine = []
+		x = np.array(q.todense())
+		for fact in tqdm(y):
+			cosine.append(self.cosine.predict([x, fact.todense()])[0])
+		return cosine.index(max(cosine))
+
 
 	def score(self, X, y):
 		pass
