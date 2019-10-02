@@ -7,6 +7,6 @@ with open('data/g_q_matrix', 'rb') as f:
 	g_q = pickle.load(f)
 
 model = MemNN()
-# model.train_embeddings(g_q, f_y)
-model.load('embedding.h5')
-print(model.predict(g_q[1], f_y))
+# model.load('embedding.h5')
+model.train_embeddings(g_q, f_y)
+# print(model.predict(g_q[1], f_y))

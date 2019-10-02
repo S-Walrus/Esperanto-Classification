@@ -17,6 +17,7 @@ from time import time
 from math import ceil
 from scipy.spatial.distance import cosine
 from tqdm import tqdm
+from sklearn.preprocessing import normalize
 
 
 '''
@@ -44,11 +45,11 @@ class MemNN:
 		self.nv = 61383
 
 		# hyperparameters
-		self.d = 30
+		self.d = 90
 		self.gamma = 0.2
 
-		self.word_embedding = Dense(self.d, input_shape=(self.nv,), name='word_embedding')
-		self.entity_embedding = Dense(self.d, input_shape=(self.ns,), name='entity_embedding')
+		self.word_embedding = Dense(self.d, input_shape=(self.nv,), name='word_embedding', use_bias=False)
+		self.entity_embedding = Dense(self.d, input_shape=(self.ns,), name='entity_embedding', use_bias=False)
 
 		g_q = Input((self.nv,), name='g_q')
 		w_q = self.word_embedding(g_q)
@@ -87,7 +88,7 @@ class MemNN:
 		return batch, target
 
 
-	def train_embeddings(self, q, y, epochs=3, rep_epoch=3, batch_size=40):
+	def train_embeddings(self, q, y, epochs=3, rep_epoch=2, batch_size=32):
 		count = q.shape[0]
 		print('Train data consists of ' + str(count) + ' samples')
 		n_batches = ceil(count / batch_size)
@@ -99,11 +100,24 @@ class MemNN:
 				batch, target = self.generate_batch(q, y, batch_size, batch_start, count)
 				self.model.fit(x=batch, y=target, epochs=rep_epoch, verbose=True)
 				batch_start += batch_size
-			if batch_start % 500 == 0:
-				print('Saving model to embedding.h5')
-				self.model.save('embeddind.h5')
+				self.normalize_layer(self.word_embedding)
+				self.normalize_layer(self.entity_embedding)
+				if random.randint(0, 100) == 0:
+					print('Saving model to embedding.h5')
+					self.model.save('embedding.h5')
 			print('Saving model to embedding.h5')
-			self.model.save('embeddind.h5')
+			self.model.save('embedding.h5')
+
+
+	def normalize_layer(self, layer):
+		W = layer.get_weights()
+		W[0] = self.normalize_weights(W[0])
+		layer.set_weights(W)
+
+
+	def normalize_weights(self, W):
+		return normalize(W)
+		# return np.array([normalize(item) for item in W])
 
 
 	def load(self, path_to_model):
