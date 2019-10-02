@@ -75,11 +75,6 @@ class MemNN:
 		self.cosine = Model([g_q, f_y], s)
 		self.cosine.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
 
-	def __input(self, fact_list, question_list):
-		pass
-
-	def __output(self, X, y):
-		pass
 
 	def generate_batch(self, q, y, batch_size, batch_start, n_samples):
 		target = np.array([np.array([1, -1]) for _ in range(batch_size)])
@@ -90,6 +85,7 @@ class MemNN:
 			np.random.choice(n_samples, batch_size)])
 		batch = [mq, my, ys]
 		return batch, target
+
 
 	def train_embeddings(self, q, y, epochs=3, rep_epoch=3, batch_size=40):
 		count = q.shape[0]
@@ -104,20 +100,30 @@ class MemNN:
 				self.model.fit(x=batch, y=target, epochs=rep_epoch, verbose=True)
 				batch_start += batch_size
 			if batch_start % 500 == 0:
-				print('Saving model to embedding.hd5')
-				self.model.save('embeddind.hd5')
-			print('Saving model to embedding.hd5')
-			self.model.save('embeddind.hd5')
+				print('Saving model to embedding.h5')
+				self.model.save('embeddind.h5')
+			print('Saving model to embedding.h5')
+			self.model.save('embeddind.h5')
+
 
 	def load(self, path_to_model):
 		self.model = load_model(path_to_model)
 		self.word_embedding = self.model.get_layer('word_embedding')
 		self.entity_embedding = self.model.get_layer('entity_embedding')
 
+
+	def is_subject_in(self, f_y, g_q):
+		return True
+
+
+	def generate_cands(self, y, q):
+		return np.array([item for item in y if self.is_subject_in(item, q)])
+
+
 	def predict(self, q, y):
 		cosine = []
 		x = np.array(q.todense())
-		for fact in tqdm(y):
+		for fact in tqdm(self.generate_cands(y, q)):
 			cosine.append(self.cosine.predict([x, fact.todense()])[0])
 		return cosine.index(max(cosine))
 
