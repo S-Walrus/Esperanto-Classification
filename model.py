@@ -70,11 +70,11 @@ class MemNN:
 
 		# build embedding trainer
 		self.model = Model([g_q, f_y, f_y_s], out)
-		self.model.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
+		self.model.compile('sgd', loss='categorical_hinge', metrics=[])
 
 		# build cosine distance calculator
 		self.cosine = Model([g_q, f_y], s)
-		self.cosine.compile('sgd', loss='categorical_hinge', metrics=['accuracy'])
+		self.cosine.compile('sgd', loss='categorical_hinge', metrics=[])
 
 
 	def generate_batch(self, q, y, batch_size, batch_start, n_samples):
@@ -88,25 +88,30 @@ class MemNN:
 		return batch, target
 
 
-	def train_embeddings(self, q, y, epochs=3, rep_epoch=2, batch_size=32):
+	def train_embeddings(self, q, y, epochs=6000, rep_epoch=1, batch_size=32):
 		count = q.shape[0]
 		print('Train data consists of ' + str(count) + ' samples')
 		n_batches = ceil(count / batch_size)
 		batch_start = 0
 		for epoch in range(1, epochs+1):
-			print('Global epoch ' + str(epoch))
-			while batch_start < count:
-				print('Batch ' + str(batch_start // batch_size + 1) + '/' + str(n_batches))
-				batch, target = self.generate_batch(q, y, batch_size, batch_start, count)
+			print('Epoch ' + str(epoch) + '/' + str(epochs))
+			if epoch % 10 == 0:
+				# look at loss
+				batch, target = self.generate_batch(q, y, 1, random.randint(0, count-1), count)
 				self.model.fit(x=batch, y=target, epochs=rep_epoch, verbose=True)
-				batch_start += batch_size
 				self.normalize_layer(self.word_embedding)
 				self.normalize_layer(self.entity_embedding)
-				if random.randint(0, 100) == 0:
-					print('Saving model to embedding.h5')
-					self.model.save('embedding.h5')
-			print('Saving model to embedding.h5')
-			self.model.save('embedding.h5')
+			else:
+				batch, target = self.generate_batch(q, y, batch_size, random.randint(0, count-batch_size), count)
+				self.model.fit(x=batch, y=target, epochs=rep_epoch, verbose=False)
+				self.normalize_layer(self.word_embedding)
+				self.normalize_layer(self.entity_embedding)
+			if epoch % 100 == 0:
+				print('Saving model to embedding.h5')
+				self.model.save('embedding.h5')
+				!! mv embedding.h5 /content/drive/My\ Drive/
+		print('Saving model to embedding.h5')
+		self.model.save('embedding.h5')
 
 
 	def normalize_layer(self, layer):
