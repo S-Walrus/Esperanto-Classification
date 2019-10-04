@@ -40,13 +40,20 @@ Here code by isaacsultan ends.
 
 class MemNN:
 
-	def __init__(self):
+	# [vocab] == np.array(string)
+	# [aliases] == np.array(string)
+	def __init__(self, vocab, aliases, d=90):
+		self.vocab = vocab
+		self.aliases = aliases
+
 		self.ns = 1969831
 		self.nv = 61383
+		# self.nv = vocab.shape[0]
 
 		# hyperparameters
-		self.d = 90
-		self.gamma = 0.2
+		self.d = d
+		# TODO (matbe) make gamma work
+		# self.gamma = 0.2
 
 		self.word_embedding = Dense(self.d, input_shape=(self.nv,), name='word_embedding', use_bias=False)
 		self.entity_embedding = Dense(self.d, input_shape=(self.ns,), name='entity_embedding', use_bias=False)
@@ -131,19 +138,30 @@ class MemNN:
 		self.entity_embedding = self.model.get_layer('entity_embedding')
 
 
-	def is_subject_in(self, f_y, g_q):
-		return True
+	def is_candidate(self, y, bow):
+		for word in bow:
+			if word in y:
+				return True
+		return False
 
 
-	def generate_cands(self, y, q):
-		return np.array([item for item in y if self.is_subject_in(item, q)])
+	def join_aliases(self, f_y):
+		# TODO write aliases on init
+		return ' '.join(self.aliases[f_y.where(f_y == 1)])
 
 
-	def predict(self, q, y):
+	def generate_cands(self, f_y, g_q):
+		# TODO write vocab on init
+		bow = self.vocab[g_q.where(g_q == 1)]
+		return np.array([item for i, item in f_y
+			if self.is_candidate(self.join_aliases(f_y), bow)])
+
+
+	def predict(self, g_q, y):
 		cosine = []
-		x = np.array(q.todense())
-		for fact in tqdm(self.generate_cands(y, q)):
-			cosine.append(self.cosine.predict([x, fact.todense()])[0])
+		x = np.array(g_q.todense())[0]
+		for fact in tqdm(self.generate_cands(y, x)):
+			cosine.append(self.cosine.predict([x, np.array(fact.todense())[0]])[0])
 		return cosine.index(max(cosine))
 
 
