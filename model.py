@@ -18,6 +18,7 @@ from time import time
 from math import ceil
 from tqdm import tqdm
 from sklearn.preprocessing import normalize
+import common
 
 
 '''
@@ -41,8 +42,8 @@ Here code by isaacsultan ends.
 
 class MemNN:
 
-    # [vocab] == np.array(string)
-    # [aliases] == np.array(string)
+    # [vocab] == [string]
+    # [aliases] == [string]
     def __init__(self, vocab, aliases, d=90):
         self.vocab = vocab
         self.aliases = aliases
@@ -145,20 +146,29 @@ class MemNN:
         return False
 
     def join_aliases(self, f_y):
-        return ' '.join(self.aliases[f_y.where(f_y == 1)])
+        return ' '.join([self.aliases[i] for i, item in enumerate(f_y)
+                         if item == 1])
 
     def generate_cands(self, f_y, g_q):
-        bow = self.vocab[g_q.where(g_q == 1)]
-        return np.array([item for i, item in f_y
-                         if self.is_candidate(self.join_aliases(f_y), bow)])
+        bow = [self.vocab[i] for i, item in enumerate(g_q) if item == 1]
+        return np.array([item for i, item in enumerate(f_y)
+                         if self.is_candidate(self.join_aliases(item), bow)])
 
     def predict(self, g_q, y):
         cosine = []
-        x = np.array(g_q.todense())[0]
-        for fact in tqdm(self.generate_cands(y, x)):
-            cosine.append(self.cosine.predict(
-                [x, np.array(fact.todense())[0]])[0])
+        for fact in tqdm(self.generate_cands(y, g_q)):
+            print(self.cosine.predict(
+                [g_q, np.array(fact.todense())[0]])[0])
         return cosine.index(max(cosine))
+
+    def predict_s(self, s, y):
+        g_q = self.parse_q(s)
+        return self.predict(g_q, y)
+
+    def parse_q(self, s):
+        s = s.strip().lower().split(' ')
+        s = common.clean_words(s)
+        return np.array([int(item in s) for item in self.vocab])
 
     def score(self, X, y):
         pass
