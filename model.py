@@ -42,8 +42,8 @@ Here code by isaacsultan ends.
 
 class MemNN:
 
-    # [vocab] == [string]
-    # [aliases] == [string]
+    # [vocab] == list<string>
+    # [aliases] == list<string>
     def __init__(self, vocab, aliases, d=90):
         self.vocab = vocab
         self.aliases = aliases
@@ -139,21 +139,40 @@ class MemNN:
         self.word_embedding = self.model.get_layer('word_embedding')
         self.entity_embedding = self.model.get_layer('entity_embedding')
 
+    '''
+    y - STRING of joined aliases
+    bow - array-like of strings-words of the question
+    returns if any word of question apper on
+    '''
     def is_candidate(self, y, bow):
         for word in bow:
             if word in y:
                 return True
         return False
 
+    '''
+    f_y - np.array bag-of-symbol repr of a question
+    returns string (joins aliases appearing in the fact)
+    '''
     def join_aliases(self, f_y):
         return ' '.join([self.aliases[i] for i, item in enumerate(f_y)
                          if item == 1])
 
-    def generate_cands(self, f_y, g_q):
+    '''
+    y - np.array of f_y
+    g_q - np.array (bag-of-symbol repr of the question)
+    returns np.array of f_y of candidates
+    '''
+    def generate_cands(self, y, g_q):
         bow = [self.vocab[i] for i, item in enumerate(g_q) if item == 1]
-        return np.array([item for i, item in enumerate(f_y)
+        return np.array([item for i, item in enumerate(y)
                          if self.is_candidate(self.join_aliases(item), bow)])
 
+    '''
+    g_q - np.array (bag-of-symbol)
+    y - np.array of f_y
+    returns index of the nearest fact
+    '''
     def predict(self, g_q, y):
         cosine = []
         for fact in tqdm(self.generate_cands(y, g_q)):
@@ -161,10 +180,19 @@ class MemNN:
                 [g_q, np.array(fact.todense())[0]])[0])
         return cosine.index(max(cosine))
 
+    '''
+    s - string
+    y - np.array of f_y
+    returns index of the nearest fact
+    '''
     def predict_s(self, s, y):
         g_q = self.parse_q(s)
         return self.predict(g_q, y)
 
+    '''
+    s - string
+    returns np.array (bag-of-symbol g_q)
+    '''
     def parse_q(self, s):
         s = s.strip().lower().split(' ')
         s = common.clean_words(s)
