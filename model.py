@@ -159,14 +159,16 @@ class MemNN:
                          if item == 1])
 
     '''
-    y - np.array of f_y
+    y - np.array of sparse f_y
     g_q - np.array (bag-of-symbol repr of the question)
     returns np.array of f_y of candidates
     '''
     def generate_cands(self, y, g_q):
         bow = [self.vocab[i] for i, item in enumerate(g_q) if item == 1]
-        return np.array([item for i, item in enumerate(y)
-                         if self.is_candidate(self.join_aliases(item), bow)])
+        return np.array([np.array(item.todense())[0]
+                         for i, item in enumerate(y)
+                         if self.is_candidate(self.join_aliases(
+                             np.array(item.todense())[0]), bow)])
 
     '''
     g_q - np.array (bag-of-symbol)
